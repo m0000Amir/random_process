@@ -1,2 +1,0 @@
-# random_process
-example
