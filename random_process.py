@@ -109,7 +109,7 @@ class RandomProcess:
             self.draw(pos)
 
         self.draw(pos)
-        print(';a')
+
         print('Time accum = ' + str(self.time_accum))
 
 
