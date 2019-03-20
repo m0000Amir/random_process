@@ -1,1 +1,2 @@
 # random_process
+example
