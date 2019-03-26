@@ -3,7 +3,12 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
-class InitVar:
+# def random(num):
+#     """ """
+#     return InitVar(num).create()
+
+
+class RandomPH:  # RandomPH
     def __init__(self, num):
         """
         :param num: dimension of variables
@@ -13,7 +18,7 @@ class InitVar:
         self.s = np.zeros([self.num, self.num])
         self.lam = np.zeros([self.num, self.num])
 
-    def normalized_vector(self):
+    def normalized_vector(self, ran_fn=np.random.rand):  # pmf
         """
         Values in the range [0, 1]
 
@@ -21,7 +26,7 @@ class InitVar:
 
         :return: vector (1 x n)
         """
-        vector = np.random.rand(1, self.num)
+        vector = ran_fn(1, self.num)
         return vector / vector.sum()
 
     def create(self):
@@ -35,89 +40,95 @@ class InitVar:
             s = self.normalized_vector()
             self.s[i, :] = s
         self.lam = np.random.randint(0, 20, size=(1, self.num))
+        return self.tau, self.s, self.lam
 
 
-class RandomProcess:
-    def __init__(self, n, init_prob, transit_prob, param):
+class RandomGen:
+    def __init__(self, *args):
         """
         Get a random process with a given distribution
 
-        :param n: nodes number of chain
-        :param init_prob: initial probabilities of moving to a node
-        :param transit_prob: probability of moving from node to node
-        :param param: random process parameter for selected distribution
+
+        :param args: init_prob: initial probabilities of moving to a node
+                     transit_prob: probability of moving from node to node
+                     param: random process parameter for selected distribution
         """
-        self.node_num = n
-        self.init_prob = init_prob
-        self.transit_prob = transit_prob
-        self.param = param
+        self.init_prob = args[0]
+        self.transit_prob = args[1]
+        self.param = args[2]
+        self.node_num = len(self.init_prob[0, :])
         self.chain = nx.MultiDiGraph()
-        self.time_accum = 0
+        self._time = 0
 
     @staticmethod
-    def rand_node(prob):
+    def pmf(prob):
         """
+        Probability mass function
 
         :param prob: probability of moving to a random node
-        :return: node
+        :return: random node
         """
         uniform_rand_value = np.random.random()
         prob = np.append(0, prob)
         node = sum(uniform_rand_value >= np.cumsum(prob)) - 1
         return node
 
-    def draw(self, pos=None):
+    def _draw(self, pos=None):
         """
         Drawing of chain
+
         :param pos: position of placed nodes
         :return: drawn directed graph
         """
-        plt.title('Time accum = ' + str(self.time_accum))
+        plt.title('Time accum = ' + str(self._time))
         if pos is None:
             pos = nx.spring_layout(self.chain)
 
-        nx.draw_networkx(self.chain, pos, with_labels=True,
+        nx.draw_networkx(self.chain, pos,
+                         with_labels=True,
                          edge_color='royalblue',
-                         node_color='mediumorchid', node_size=500,
-                         arrowsize=20, arrowstyle='fancy', arrows_color='cyan')
+                         node_color='mediumorchid',
+                         node_size=500,
+                         arrowsize=20,
+                         arrowstyle='fancy',
+                         arrows_color='cyan')
 
-        nx.draw_networkx_nodes(self.chain, pos, node_size=1000,
+        nx.draw_networkx_nodes(self.chain, pos,
+                               node_size=1000,
                                node_color='indigo',
                                nodelist=[self.node_num - 1])
         plt.show()
         plt.clf()
         return pos
 
-    def solution(self):
+    def gen_value(self):
         """
-
-        :return: received time accum
+        :return: received time (random variable)
         """
         [self.chain.add_node(i) for i in range(self.node_num)]
-        pos = self.draw()
-        node = self.rand_node(self.init_prob)
+        pos = self._draw()
+        node = self.pmf(self.init_prob)
         if node == self.node_num - 1:
             print('moved to the last node')
             pass
         else:
-            self.time_accum += np.random.poisson(self.param[0, node])
+            self._time += np.random.poisson(self.param[0, node])
 
         while node != self.node_num - 1:
             previous_node = node
-            node = self.rand_node(self.transit_prob[previous_node, :])
+            node = self.pmf(self.transit_prob[previous_node, :])
             self.chain.add_edge(previous_node, node)
 
-            self.time_accum += np.random.poisson(self.param[0, node])
-            self.draw(pos)
-        # self.draw(pos)
-        print('Time accum = ' + str(self.time_accum))
+            self._time += np.random.poisson(self.param[0, node])
+            self._draw(pos)
+        # self._draw(pos)
+        print('Time = ' + str(self._time))
 
 
 if __name__ == '__main__':
     n = 30  # nodes number
 
-    init = InitVar(n)
-    init.create()
+    [tay, s, lam] = RandomPH(n).create()
 
-    process = RandomProcess(n, init.tau, init.s, init.lam)
-    process.solution()
+    process = RandomGen(tay, s, lam)
+    process.gen_value()
